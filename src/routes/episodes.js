@@ -3,6 +3,21 @@ import prisma from "../prisma.js";
 
 const router = Router();
 
+// GET /api/episodes — lista todos los episodios publicados (para búsqueda)
+router.get("/", async (req, res) => {
+  const episodes = await prisma.episode.findMany({
+    where: { isPublished: true },
+    orderBy: [{ seasonId: "asc" }, { number: "asc" }],
+    select: {
+      id: true,
+      number: true,
+      title: true,
+      season: { select: { number: true } },
+    },
+  });
+  res.json(episodes);
+});
+
 // GET /api/episodes/random?exclude=5
 router.get("/random", async (req, res) => {
   const exclude = req.query.exclude ? Number(req.query.exclude) : null;
