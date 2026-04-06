@@ -40,15 +40,16 @@ model Episode {
 
 // Usuarios
 model User {
-  id           Int      @id @default(autoincrement())
-  username     String   @unique
-  email        String   @unique
-  passwordHash String
-  role         Role     @default(USER)
-  createdAt    DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  googleId  String   @unique
+  username  String
+  email     String   @unique
+  avatarUrl String?
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
 
-  progress     WatchProgress[]
-  favorites    Favorite[]
+  progress  WatchProgress[]
+  favorites Favorite[]
 }
 
 // Enum: tipos de usuario
