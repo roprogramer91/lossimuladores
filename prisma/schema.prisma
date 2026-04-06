@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Temporadas de la serie (Temporada 1, Temporada 2, etc.)
+model Season {
+  id          Int       @id @default(autoincrement())
+  number      Int       @unique
+  title       String
+  description String?
+  posterUrl   String?
+  year        Int?
+  createdAt   DateTime  @default(now())
+
+  episodes    Episode[]
+}
+
+// Episodios de cada temporada
+model Episode {
+  id           Int      @id @default(autoincrement())
+  seasonId     Int
+  number       Int
+  title        String
+  description  String?
+  durationMin  Int?
+  videoUrl     String   // URL de Vimeo
+  thumbnailUrl String?
+  isPublished  Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  season       Season   @relation(fields: [seasonId], references: [id])
+  progress     WatchProgress[]
+  favorites    Favorite[]
+}
+
+// Usuarios
+model User {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now())
+
+  progress     WatchProgress[]
+  favorites    Favorite[]
+}
+
+// Enum: tipos de usuario
+enum Role {
+  USER
+  ADMIN
+}
+
+// Progreso de reproducción (cuánto vio cada usuario de cada episodio)
+model WatchProgress {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  episodeId   Int
+  progressSec Int      @default(0) // segundos reproducidos
+  completed   Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id])
+  episode     Episode  @relation(fields: [episodeId], references: [id])
+
+  @@unique([userId, episodeId]) // un registro por usuario por episodio
+}
+
+// Favoritos
+model Favorite {
+  userId    Int
+  episodeId Int
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+  episode   Episode  @relation(fields: [episodeId], references: [id])
+
+  @@id([userId, episodeId]) // clave primaria compuesta
+}
