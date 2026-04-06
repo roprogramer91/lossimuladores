@@ -1,78 +1,59 @@
 import { Router } from "express";
 import jwt from "jsonwebtoken";
-import passport from "../auth/passport.js";
+import bcrypt from "bcrypt";
 import prisma from "../prisma.js";
 
 const router = Router();
 
-// Inicia el flujo de login con Google
-// La app le pasa su redirectUri para que el backend sepa a dónde volver
-router.get("/google", (req, res, next) => {
-  const appRedirect = req.query.redirectUri || "lossimuladores://auth";
+// POST /api/auth/register
+router.post("/register", async (req, res) => {
+  const { username, email, password } = req.body;
 
-  passport.authenticate("google", {
-    scope: ["profile", "email"],
-    session: false,
-    // Codificamos el redirectUri en base64 para pasarlo como state
-    state: Buffer.from(appRedirect).toString("base64"),
-  })(req, res, next);
+  if (!username || !email || !password) {
+    return res.status(400).json({ error: "Todos los campos son obligatorios" });
+  }
+
+  const existe = await prisma.user.findFirst({
+    where: { OR: [{ email }, { username }] },
+  });
+
+  if (existe) {
+    return res.status(400).json({ error: "El email o usuario ya está en uso" });
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+
+  const user = await prisma.user.create({
+    data: { username, email, passwordHash },
+  });
+
+  const token = jwt.sign(
+    { id: user.id, email: user.email, username: user.username, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: "30d" }
+  );
+
+  res.status(201).json({ token, user: { id: user.id, username: user.username, email: user.email, role: user.role } });
 });
 
-// Google redirige acá después de que el usuario acepta
-router.get(
-  "/google/callback",
-  passport.authenticate("google", {
-    session: false,
-    failureRedirect: "/api/auth/error",
-  }),
-  (req, res) => {
-    // Recuperamos el redirectUri del state
-    const appRedirect = req.query.state
-      ? Buffer.from(req.query.state, "base64").toString("utf8")
-      : "lossimuladores://auth";
+// POST /api/auth/login
+router.post("/login", async (req, res) => {
+  const { email, password } = req.body;
 
-    const token = jwt.sign(
-      {
-        id: req.user.id,
-        email: req.user.email,
-        username: req.user.username,
-        role: req.user.role,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "30d" }
-    );
-
-    res.redirect(`${appRedirect}?token=${token}`);
-  }
-);
-
-// Recibe el accessToken de Google desde la app mobile
-// y devuelve un JWT propio
-router.post("/google/token", async (req, res) => {
-  const { accessToken } = req.body;
-
-  // Verificamos el token con Google para obtener los datos del usuario
-  const googleRes = await fetch(
-    `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`
-  );
-  const profile = await googleRes.json();
-
-  if (!profile.sub) {
-    return res.status(401).json({ error: "Token de Google inválido" });
+  if (!email || !password) {
+    return res.status(400).json({ error: "Email y contraseña son obligatorios" });
   }
 
-  // Buscamos o creamos el usuario
-  let user = await prisma.user.findUnique({ where: { googleId: profile.sub } });
+  const user = await prisma.user.findUnique({ where: { email } });
 
   if (!user) {
-    user = await prisma.user.create({
-      data: {
-        googleId: profile.sub,
-        email: profile.email,
-        username: profile.name,
-        avatarUrl: profile.picture,
-      },
-    });
+    return res.status(401).json({ error: "Credenciales inválidas" });
+  }
+
+  const valid = await bcrypt.compare(password, user.passwordHash);
+
+  if (!valid) {
+    return res.status(401).json({ error: "Credenciales inválidas" });
   }
 
   const token = jwt.sign(
@@ -81,11 +62,7 @@ router.post("/google/token", async (req, res) => {
     { expiresIn: "30d" }
   );
 
-  res.json({ token });
-});
-
-router.get("/error", (req, res) => {
-  res.status(401).json({ error: "Error al autenticar con Google" });
+  res.json({ token, user: { id: user.id, username: user.username, email: user.email, role: user.role } });
 });
 
 export default router;

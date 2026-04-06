@@ -1,7 +1,6 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import passport from "./auth/passport.js";
 import seasonsRouter from "./routes/seasons.js";
 import episodesRouter from "./routes/episodes.js";
 import authRouter from "./routes/auth.js";
@@ -12,7 +11,6 @@ const PORT = process.env.PORT || 3000;
 // Middlewares
 app.use(cors());
 app.use(express.json());
-app.use(passport.initialize());
 
 // Ruta de prueba
 app.get("/", (req, res) => {
