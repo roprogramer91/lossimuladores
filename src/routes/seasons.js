@@ -7,6 +7,7 @@ const router = Router();
 router.get("/", async (req, res) => {
   const seasons = await prisma.season.findMany({
     orderBy: { number: "asc" },
+    include: { _count: { select: { episodes: true } } },
   });
   res.json(seasons);
 });
