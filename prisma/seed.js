@@ -7,14 +7,14 @@ async function main() {
   const temporada1 = await prisma.season.upsert({
     where: { number: 1 },
     update: {
-      posterUrl: "https://m.media-amazon.com/images/S/pv-target-images/a44101d5d735b683f0e2fa3cbb9e003ff8338d3908c27a602e60ec318ade50d9.jpg",
+      posterUrl: "https://i.imgur.com/SHxwVT9.jpg",
     },
     create: {
       number: 1,
       title: "Temporada 1",
       description: "Primera temporada de Los Simuladores",
       year: 2002,
-      posterUrl: "https://m.media-amazon.com/images/S/pv-target-images/a44101d5d735b683f0e2fa3cbb9e003ff8338d3908c27a602e60ec318ade50d9.jpg",
+      posterUrl: "https://i.imgur.com/SHxwVT9.jpg",
     },
   });
 
