@@ -6,7 +6,7 @@
 
 */
 -- AlterTable
-ALTER TABLE "User" ADD COLUMN     "passwordHash" TEXT NOT NULL,
+ALTER TABLE "User" ADD COLUMN "passwordHash" TEXT NOT NULL DEFAULT '',
 ALTER COLUMN "googleId" DROP NOT NULL;
 
 -- CreateIndex
