@@ -5,18 +5,31 @@ import passport from "../auth/passport.js";
 const router = Router();
 
 // Inicia el flujo de login con Google
-// El usuario es redirigido a la pantalla de Google para elegir su cuenta
-router.get(
-  "/google",
-  passport.authenticate("google", { scope: ["profile", "email"], session: false })
-);
+// La app le pasa su redirectUri para que el backend sepa a dónde volver
+router.get("/google", (req, res, next) => {
+  const appRedirect = req.query.redirectUri || "lossimuladores://auth";
+
+  passport.authenticate("google", {
+    scope: ["profile", "email"],
+    session: false,
+    // Codificamos el redirectUri en base64 para pasarlo como state
+    state: Buffer.from(appRedirect).toString("base64"),
+  })(req, res, next);
+});
 
 // Google redirige acá después de que el usuario acepta
 router.get(
   "/google/callback",
-  passport.authenticate("google", { session: false, failureRedirect: "/api/auth/error" }),
+  passport.authenticate("google", {
+    session: false,
+    failureRedirect: "/api/auth/error",
+  }),
   (req, res) => {
-    // Generamos el JWT con los datos del usuario
+    // Recuperamos el redirectUri del state
+    const appRedirect = req.query.state
+      ? Buffer.from(req.query.state, "base64").toString("utf8")
+      : "lossimuladores://auth";
+
     const token = jwt.sign(
       {
         id: req.user.id,
@@ -28,9 +41,7 @@ router.get(
       { expiresIn: "30d" }
     );
 
-    // Redirigimos a la app con el token en la URL
-    // La app lo intercepta y lo guarda localmente
-    res.redirect(`lossimuladores://auth?token=${token}`);
+    res.redirect(`${appRedirect}?token=${token}`);
   }
 );
 
