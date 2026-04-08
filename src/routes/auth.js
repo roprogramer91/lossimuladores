@@ -65,4 +65,42 @@ router.post("/login", async (req, res) => {
   res.json({ token, user: { id: user.id, username: user.username, email: user.email, role: user.role } });
 });
 
+// POST /api/auth/google/token — recibe el access token de Google y devuelve JWT propio
+router.post("/google/token", async (req, res) => {
+  const { accessToken } = req.body;
+
+  if (!accessToken) {
+    return res.status(400).json({ error: "Token requerido" });
+  }
+
+  const response = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    return res.status(401).json({ error: "Token de Google inválido" });
+  }
+
+  const googleUser = await response.json();
+
+  const user = await prisma.user.upsert({
+    where: { email: googleUser.email },
+    update: { avatarUrl: googleUser.picture, googleId: googleUser.sub },
+    create: {
+      email: googleUser.email,
+      username: googleUser.email.split("@")[0],
+      googleId: googleUser.sub,
+      avatarUrl: googleUser.picture,
+    },
+  });
+
+  const token = jwt.sign(
+    { id: user.id, email: user.email, username: user.username, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: "30d" }
+  );
+
+  res.json({ token, user: { id: user.id, username: user.username, email: user.email, role: user.role, avatarUrl: user.avatarUrl } });
+});
+
 export default router;
