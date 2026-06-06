@@ -24,6 +24,7 @@ passport.use(
               email: profile.emails[0].value,
               username: profile.displayName,
               avatarUrl: profile.photos[0]?.value,
+              passwordHash: "",
             },
           });
         }
