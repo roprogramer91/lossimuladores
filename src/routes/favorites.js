@@ -17,7 +17,7 @@ router.get("/", requireAuth, async (req, res) => {
           thumbnailUrl: true,
           durationMin: true,
           seasonId: true,
-          season: { select: { number: true } },
+          season: { select: { number: true, posterUrl: true } },
         },
       },
     },
